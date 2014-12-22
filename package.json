@@ -1,0 +1,26 @@
+{
+  "name": "http-image-conversor",
+  "version": "0.0.1",
+  "description": "Small javascript image conversion server. Detects where to find the original image, the desired dimensions and returns an image that complains with that",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Gahen/node-resize-deamon.git"
+  },
+  "keywords": [
+    "node",
+    "resize",
+    "image",
+    "lwip"
+  ],
+  "author": "Joaquín Omar Tumas <j.tumas@gmail.com>",
+  "license": "GPL v3",
+  "dependencies": {
+    "express": "^4.10.6",
+    "lwip": "0.0.5",
+    "request": "^2.51.0"
+  }
+}
