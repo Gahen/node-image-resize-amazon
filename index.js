@@ -13,22 +13,42 @@ function sendError(res) {
 	res.end();
 }
 
-function tryGM(body, width, height, res) {
-    gm(body).resize(width,height).toBuffer('JPEG', function (err, buffer) {
-		if (err) {
-			console.error(err);
-			sendError(res);
-		} else {
-			res.writeHead(200, {
-				'Content-Type': 'image/jpeg',
-				'Content-Length': buffer.length
+function tryGM(body, width, height, res, flag) {
+	console.log('trying with gm module');
+
+	var ratio;
+	var image = gm(body);
+	if (flag) {
+		image.size(function(err, size) {
+			console.log(size);
+			console.log(flag);
+			if (flag === 'z') {
+				ratio = Math.min(width, size.width) / size.width;
+			} else if (flag === 'y') {
+				ratio = Math.min(height, size.height) / size.height;
+			}
+
+			width = size.width * ratio;
+			height = size.height * ratio;
+
+			image.scale(width, height).toBuffer('JPEG', function (err, buffer) {
+				if (err) {
+					console.error(err);
+					sendError(res);
+				} else {
+					res.writeHead(200, {
+						'Content-Type': 'image/jpeg',
+						'Content-Length': buffer.length
+					});
+
+					res.write(buffer);
+
+					res.end();
+				}
 			});
+		});
+	}
 
-			res.write(buffer);
-
-			res.end();
-		}
-    });
 }
 
 app.get('*', function(req, res) {
@@ -45,6 +65,16 @@ app.get('*', function(req, res) {
 			if (dimensions.length !== 2) {
 				throw new Error('invalid url');
 			}
+			var flag = dimensions[1][dimensions[1].length-1];
+
+			if (flag === 'y' || flag === 'z') {
+				dimensions[1] = dimensions[1].substr(0, dimensions[1].length - 1);
+			} else {
+				flag = false;
+			}
+
+			console.log(dimensions);
+
 			var width = parseFloat(dimensions[0]);
 			var height = parseFloat(dimensions[1]);
 
@@ -56,9 +86,16 @@ app.get('*', function(req, res) {
 				// obtain an image object:
 				require('lwip').open(body, 'jpg', function(err, image){
 					if (!err && image) {
-						var wratio = width / image.width();
-						var hratio = height / image.height();
-						var ratio = Math.min(wratio, hratio);
+						var ratio;
+						if (flag) {
+							if (flag === 'z') {
+								ratio = Math.min(width, image.width()) / image.width();
+							} else if (flag === 'y') {
+								ratio = Math.min(height, image.height()) / image.height();
+							}
+						} else {
+							ratio = Math.min(width / image.width(), height / image.height());
+						}
 
 						image.batch().scale(ratio).toBuffer('jpg', {}, function(err, image){
 							res.writeHead(200, {
@@ -69,7 +106,7 @@ app.get('*', function(req, res) {
 							res.end();
 						});
 					} else {
-						tryGM(body, width, height, res);
+						tryGM(body, width, height, res, flag);
 					}
 				});
 			});
