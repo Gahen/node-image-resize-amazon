@@ -2,6 +2,7 @@
 
 var express = require('express');
 var app = express();
+var gm = require('gm');
 var request = require('request');
 var host = process.argv[2];
 
@@ -10,6 +11,24 @@ function sendError(res) {
 		'Content-type': 'text/plain'
 	});
 	res.end();
+}
+
+function tryGM(body, width, height, res) {
+    gm(body).resize(width,height).toBuffer('JPEG', function (err, buffer) {
+		if (err) {
+			console.error(err);
+			sendError(res);
+		} else {
+			res.writeHead(200, {
+				'Content-Type': 'image/jpeg',
+				'Content-Length': buffer.size
+			});
+
+			res.write(buffer);
+
+			res.end();
+		}
+    });
 }
 
 app.get('*', function(req, res) {
@@ -21,7 +40,6 @@ app.get('*', function(req, res) {
 	} else {
 		try {
 			var image = host + req.url.replace('/t/', '/i/').replace(/_[^.]*/, ''); // removes _YYYxZZZ extension and changes base folder.
-			// image = image.replace('s4', 's3');
 			var dimensions = req.path.replace('.jpg', '').split('/');
 			dimensions = dimensions[dimensions.length-1].split('_')[1].split('x');
 			if (dimensions.length !== 2) {
@@ -51,7 +69,7 @@ app.get('*', function(req, res) {
 							res.end();
 						});
 					} else {
-						sendError(res);
+						tryGM(body, width, height, res);
 					}
 				});
 			});

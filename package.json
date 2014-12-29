@@ -20,6 +20,7 @@
   "license": "GPL v3",
   "dependencies": {
     "express": "^4.10.6",
+    "gm": "^1.17.0",
     "lwip": "0.0.5",
     "request": "^2.51.0"
   }
