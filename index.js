@@ -21,7 +21,7 @@ function tryGM(body, width, height, res) {
 		} else {
 			res.writeHead(200, {
 				'Content-Type': 'image/jpeg',
-				'Content-Length': buffer.size
+				'Content-Length': buffer.length
 			});
 
 			res.write(buffer);
