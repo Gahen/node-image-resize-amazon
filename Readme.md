@@ -4,7 +4,10 @@ It redirects to the host passed as parameter replacing a "t" path for an "i" pat
 
 <pre>
 $ node index.js http://my-image-server.com
+</pre>
 
+Then doing
+<pre>
 GET http://mynodeserver.com/someurl/t/someimage_100x200.jpg
 </pre>
 
