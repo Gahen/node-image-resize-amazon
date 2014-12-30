@@ -16,16 +16,16 @@ function sendError(res) {
 function tryGM(body, width, height, res, flag) {
 	console.log('trying with gm module');
 
-	var ratio;
 	var image = gm(body);
 	if (flag) {
 		image.size(function(err, size) {
-			console.log(size);
-			console.log(flag);
-			if (flag === 'z') {
+			var ratio = Infinity;
+
+			if (flag.indexOf('z') !== -1) {
 				ratio = Math.min(width, size.width) / size.width;
-			} else if (flag === 'y') {
-				ratio = Math.min(height, size.height) / size.height;
+			}
+			if (flag.indexOf('y') !== -1) {
+				ratio = Math.min(ratio, Math.min(height, size.height) / size.height);
 			}
 
 			width = size.width * ratio;
@@ -65,13 +65,13 @@ app.get('*', function(req, res) {
 			if (dimensions.length !== 2) {
 				throw new Error('invalid url');
 			}
-			var flag = dimensions[1][dimensions[1].length-1];
+			var flag = dimensions[1][dimensions[1].length-2];
 
-			if (flag === 'y' || flag === 'z') {
-				dimensions[1] = dimensions[1].substr(0, dimensions[1].length - 1);
-			} else {
+			if (flag.indexOf('y') === -1 && flag.indexOf('z') === -1) {
 				flag = false;
 			}
+
+			dimensions[1] = dimensions[1].replace(/z+y+/g,'');
 
 			console.log(dimensions);
 
@@ -86,12 +86,13 @@ app.get('*', function(req, res) {
 				// obtain an image object:
 				require('lwip').open(body, 'jpg', function(err, image){
 					if (!err && image) {
-						var ratio;
+						var ratio = Infinity;
 						if (flag) {
-							if (flag === 'z') {
+							if (flag.indexOf('z') !== -1) {
 								ratio = Math.min(width, image.width()) / image.width();
-							} else if (flag === 'y') {
-								ratio = Math.min(height, image.height()) / image.height();
+							}
+							if (flag.indexOf('y') !== -1) {
+								ratio = Math.min(ratio, Math.min(height, image.height()) / image.height());
 							}
 						} else {
 							ratio = Math.min(width / image.width(), height / image.height());
