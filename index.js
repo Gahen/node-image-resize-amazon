@@ -47,6 +47,22 @@ function tryGM(body, width, height, res, flag) {
 				}
 			});
 		});
+	} else {
+		image.scale(width, height).toBuffer('JPEG', function (err, buffer) {
+			if (err) {
+				console.error(err);
+				sendError(res);
+			} else {
+				res.writeHead(200, {
+					'Content-Type': 'image/jpeg',
+					'Content-Length': buffer.length
+				});
+
+				res.write(buffer);
+
+				res.end();
+			}
+		});
 	}
 
 }
