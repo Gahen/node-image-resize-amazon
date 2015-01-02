@@ -5,6 +5,29 @@ var app = express();
 var gm = require('gm');
 var request = require('request');
 var host = process.argv[2];
+var bucket = process.argv[3];
+
+function uploadToAmazon(image, key) {
+	if (!bucket) {
+		return false;
+	}
+
+	// Load the AWS SDK for Node.js
+	// This assumes you have the appropiate keys set as enviroment variables.
+	var AWS = require('aws-sdk');
+
+	var s3bucket = new AWS.S3({params: {Bucket: bucket}});
+	s3bucket.createBucket(function() {
+	  var params = {Key: key.substr(1), Body: image, ContentType: 'image/jpeg'}; // We should check that permissions are right.
+	  s3bucket.upload(params, function(err) {
+		if (err) {
+		  console.log('Error uploading data: ', err);
+		} else {
+		  console.log('Successfully uploaded data to '+bucket+key);
+		}
+	  });
+	});
+}
 
 function sendError(res) {
 	res.writeHead(400, {
@@ -13,7 +36,19 @@ function sendError(res) {
 	res.end();
 }
 
-function tryGM(body, width, height, res, flag) {
+function complete(image, res, url) {
+	res.writeHead(200, {
+		'Content-Type': 'image/jpeg',
+		'Content-Length': image.length
+	});
+
+	res.write(image);
+	res.end();
+
+	uploadToAmazon(image, require('url').parse(url).path);
+}
+
+function tryGM(body, width, height, res, flag, dest) {
 	console.log('trying with gm module');
 
 	var image = gm(body);
@@ -36,13 +71,7 @@ function tryGM(body, width, height, res, flag) {
 					console.error(err);
 					sendError(res);
 				} else {
-					res.writeHead(200, {
-						'Content-Type': 'image/jpeg',
-						'Content-Length': buffer.length
-					});
-
-					res.write(buffer);
-
+					complete(buffer, res, dest);
 					res.end();
 				}
 			});
@@ -53,14 +82,7 @@ function tryGM(body, width, height, res, flag) {
 				console.error(err);
 				sendError(res);
 			} else {
-				res.writeHead(200, {
-					'Content-Type': 'image/jpeg',
-					'Content-Length': buffer.length
-				});
-
-				res.write(buffer);
-
-				res.end();
+				complete(buffer, res, dest);
 			}
 		});
 	}
@@ -75,7 +97,8 @@ app.get('*', function(req, res) {
 		res.end();
 	} else {
 		try {
-			var image = host + req.url.replace('/t/', '/i/').replace(/_[^.]*/, ''); // removes _YYYxZZZ extension and changes base folder.
+			var destiny = host + req.url;
+			var url = destiny.replace('/t/', '/i/').replace(/_[^.]*/, ''); // removes _YYYxZZZ extension and changes base folder.
 			var dimensions = req.path.replace('.jpg', '').split('/');
 			dimensions = dimensions[dimensions.length-1].split('_')[1].split('x');
 			if (dimensions.length !== 2) {
@@ -94,9 +117,9 @@ app.get('*', function(req, res) {
 			var width = parseFloat(dimensions[0]);
 			var height = parseFloat(dimensions[1]);
 
-			console.log(image);
+			console.log(url);
 			request.get({
-				url: image,
+				url: url,
 				encoding: null
 			}, function(error, response, body) {
 				// obtain an image object:
@@ -115,15 +138,10 @@ app.get('*', function(req, res) {
 						}
 
 						image.batch().scale(ratio).toBuffer('jpg', {}, function(err, image){
-							res.writeHead(200, {
-								'Content-Length': image.length,
-								'Content-Type':  'image/jpeg'
-							});
-							res.write(image);
-							res.end();
+							complete(image, res, destiny);
 						});
 					} else {
-						tryGM(body, width, height, res, flag);
+						tryGM(body, width, height, res, flag, destiny);
 					}
 				});
 			});
@@ -133,7 +151,6 @@ app.get('*', function(req, res) {
 		}
 	}
 });
-
 
 console.log('listening on localhost:80');
 app.listen(80, '0.0.0.0');
